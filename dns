@@ -1,3 +1,4 @@
 rpm -q bind
 systemctl status bind
-yum install -y dhcpd
+yum install -y bind
+vim /etc/named.conf
