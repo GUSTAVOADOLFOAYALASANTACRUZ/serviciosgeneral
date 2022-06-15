@@ -1,1 +1,3 @@
-
+rpm -q bind
+systemctl status bind
+yum install -y dhcpd
