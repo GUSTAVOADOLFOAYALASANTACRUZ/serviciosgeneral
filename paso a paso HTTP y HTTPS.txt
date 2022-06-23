@@ -1,0 +1,277 @@
+1. cambiar nombre del host al SERVIDOR 2
+hostname www
+
+hacer un ifconfig y mirar cual de los adaptadores de red esta por
+red interna LAN y de ese enp0s# que esta por red interna copiar su
+direccion MAC
+
+2. dar un IP fija
+ahora en el SERVIDOR 1 ir a
+vim /etc/dhcp/dhcpd.conf
+
+y darle una IP fija al SERVIDO 2
+
+host www {
+hardware ethernet [aqui ponen la direccion MAC separadas con :]
+fired-address 20.0.0.11;
+}
+
+:wq
+
+systemctl restart dhcpd
+
+y ir al SERVIDOR 2 y hacer un ifdown y ifup al adaptador que este por red interna
+y mirar si le esta dando la IP fija 
+tambien hacer ping a la direccion del SERVIDOR 1 y nslookup y mirar el /etc/resolv.conf
+que tenga la ip y nombre del SERVIDOR 1
+
+ya despues de hacer los pings y mirar que le esta dando la ip ahora si vamos hacer
+las configuraciones de HTTP en el SERVIDOR 2
+
+3. puertos
+en el SERVIDOR 2
+firewall-cmd --permanent --add-port=80/tcp
+firewall-cmd --permanent --add-service=http
+firewall-cmd --reload
+
+en el SERVIDOR 1
+firewall-cmd --permanent --add-port=80/tcp
+firewall-cmd --reload
+
+en el SERVIDOR 2
+systemctl start httpd
+RECUERDE si no sale nada todo esta bien
+
+ahora en la maquina CLIENTE abrimos un navegador web y escribimos
+www.ppascuasa.local
+
+y debe de aparecer la pagina de prueba de APACHE
+
+4. en el SERVIDOR 2 vamos a crear un directorio en donde guardaremos
+algunas configuraciones
+
+mkdir -p /var/www/ppascuasa.local/html
+
+vamos al directorio
+cd /var/www/ppascuasa.local/html
+
+y creamos un archivo touch index.html
+
+y vamos a ese archivo a crear una pagina web
+
+vim index.html
+
+<!DOCTYPE html>
+<html>
+ <head>
+   <meta charset="utf-8">
+   <title>MI PAGINA DE PRUEBA</title>
+ </head>
+ <body>
+  <h1 style="text-align:center;">Pagina de prueba www.ppascuasa.local</h1>
+  <cr>
+  <img src="images/firefox-icon.png" alt="Mi imagen de prueba">
+ </body>
+</html>
+
+pueden descargar la imagen por internet y arrastrala a los archivos
+gracias a la ayuda de mobaxterm
+si no tienen ese programa en la pagina no pongan la parte de la imagen
+
+:wq
+
+si no tiene modaxterm omita los pasos sobre la imagen de la pagina
+
+ya al mover la imagen desde la MAQUINA ANFITRION a modaxterm para que aparesca
+el archivo en el centOS la moveremos dentro del centOS a la directorio de imagenes
+para que aparesca en la imagne
+
+mv firefox-icon.png images/
+
+5. vamos a crear otros archivos para la configuracion de HTTP
+mkdir /etc/httpd/sites-available
+mkdir /etc/httpd/sites-enabled
+
+crearemos otros archivos
+
+touch /var/www/ppascuasa.local/error_log
+touch /var/www/ppascuasa.local/request_log
+
+vamos a referencias otros archivos a los que hemos creados
+
+chcon --reference /var/log/httpd/error_log /var/www/ppascuasa.local/error_log
+chcon --reference /var/log/httpd/access_log /var/www/ppascuasa.local/request_log
+
+6.vamos a editar el archivo de configuracion
+
+vim /etc/httpd/conf/httpd.conf
+
+para que aparesca los numero de las lineas de codigo
+esc
+:set number
+
+y ahora vamos a la linea de codigo #95
+
+la descomentamos y queda de la siguiente manera
+ServerName www.ppascuasa.local:80
+
+ahora en la linea #119
+queda asi
+
+DocumentRoot "/var/www/ppascuasa.local/"
+
+y ahora vamos al final del archivo
+
+y agregaremos
+IncludeOptional sites-enabled/*.conf
+
+:wq
+
+vamos a crear otro archivo
+touch /etc/httpd/sites-available/ppascuasa.local.conf
+
+ahora vamos a editarlo
+vim /etc/httpd/sites-available/ppascuasa.local.conf
+
+por favor crear tambien las lineas que estan comentadas
+ya que despues la usaremos en la configuracion de HHTPS
+
+<VirtualHost 20.0.0.11:80>
+	ServerName www.ppascuasa.local
+	ServerAlias ppascuasa.local
+	DocumentRoot /var/www/ppascuasa.local/html
+	ErrorLog /var/www/ppascuasa.local/error_log
+	CustomLog /var/www/ppascuasa.local/request_log combined
+	#SSLEngine on
+	#SSLCertificateFile /etc/pki/tls/certs/ca.crt
+	#SSLCertificateKeyFile /etc/pki/tls/private/ca.key
+</VirtualHost>
+
+:wq
+
+7. vamos hacer otro enlace
+
+ln -s /etc/httpd/sites-available/ppascuasa.local.conf /etc/httpd/sites-enabled/ppascuasa.local.conf
+
+8.reiniciamos el servicio
+
+systemctl restart httpd
+recuerde si no sale nada todo esta OK
+
+9.prueba de fuego
+otra vez ir a la maquina CLIENTE y en en navegador poner
+
+www.ppascuasa.local
+
+si aparece la pagina de prueba de APACHE y no la que hemos creado nosotros
+es que algun archivo de configuracion quedo mal modificado
+
+y en este punto ya hicimos la configuracion de HTTP
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ahora seguiremos con la configuracion HTTPS
+
+10. ahora vamos a crear una llave
+
+vamos a 
+cd /home/ y aqui crearemos las llaves
+
+openssl genrsa -out ca.key 1024
+
+11.vamos a crear el certificado para la pagina HTTPS
+
+openssl req -new -key ca.key -out ca.csr 
+en la creacion del certificado se le pedira que ingrese cierta
+informacion para la crearcion del certificado
+
+y la informacion a ingresar es la siguiente
+
+Country Name [XX]:CO
+State or Province Name[]:VALLE
+Locality Name[]:CALI 
+Organization Name[]:PPASCUAS-INC
+Oranization Unit Name[]:INC
+Common Name[]: ppascuasa.local
+Email Address[]: admin@ppascuasa.local
+
+los 2 ultimos dejelos vacios solo pulse ENTER
+
+'extra' attributes
+password[]:
+optional company name[]:
+
+12. vamos a crear otra llave
+
+recuerde que debe estar en
+cd /home/
+
+openssl x509 -req -days 365 -in ca.csr -signkey ca.key -out ca.crt
+
+ahora vamos a mandar las llaves a otra ubicacion
+
+cp ca.crt /etc/pki/tls/certs/
+cp ca.key /etc/pki/tls/private/
+cp ca.csr /etc/pki/tls/private/
+
+restorecon -R /etc/pki/
+
+13.vamos a editar un archivo para decir la ubicacion de las llaves
+
+vim /etc/httpd/conf.d/ssl.conf
+
+:set number
+
+vamos a la linea #100
+
+SSLCertificateFile /etc/pki/tls/certs/ca.crt
+
+a la linea #107
+
+SSLCertificateKeyFile /etc/pki/tls/private/ca.key
+
+:wq
+
+14.vamos a descomentar las lineas del archivo que creamos antes
+
+vim /etc/httpd/sites-available/ppascuasa.local.conf
+
+las 3 lineas de SSL las descomentamos y en la primera linea de comandos
+le cambiamos el puerto de acceso
+
+<VirtuaHost 20.0.0.11:443>
+
+:wq
+
+15. puertos
+firewall-cmd --permanent --add-service=https
+firewall-cmd --permanent --add-port=443/tcp
+firewall-cmd --reload
+
+16. vamos a cambiar las escuchas del puerto en el archivo de configuracion
+
+vim /etc/httpd/conf/httpd.conf
+
+en la linea #42
+la comentamos
+
+en la linea #95
+hay que cambiar el :80 por :443
+
+:wq
+
+systemctl restart httpd
+si no sale nada esta todo OK
+
+17.prueba de fuego
+
+ahora en el navegador web de la maquina CLIENTE
+ponemos
+
+https://www.ppascuasa.local
+
+y deberia de mostrar la pagina que nosotros creamos
+si aparece la pagina que nosotros creamos hemos
+TERMINADO
+
+pero en el caso de que no salga es que hay un error en la
+configuracion de los archivos
