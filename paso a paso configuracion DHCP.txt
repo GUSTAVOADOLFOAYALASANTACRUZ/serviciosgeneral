@@ -1,0 +1,135 @@
+1.vamos a configurar el enp0s8
+
+vim /etc/sysconfig/network-scripts/ifcfg-enp0s8
+
+IPADDR = 20.0.0.254
+NETMASK = 255.0.0.0
+GATEAWAY = 20.0.0.1
+
+:wq
+
+ifdown enp0s8
+ifup enp0s8
+
+2. realizar la copia de seguridad
+del archivo de configuracion
+
+cp /usr/share/doc/dhcp-4.2.5/dhcpd.conf.example /etc/dhcp/dhcpd.conf
+
+3.vamos a editar el archivo de configuracion
+
+vim /etc/dhcp/dhcpd.conf
+
+en el archivo de configuracion aparecera 
+2 lieas con configuracion que empiezan por option
+esas lineas se comentaran ##
+y las 2 siguientes lineas tambien se comentaran ##
+
+hay una linea que empieza por log esa NO se comentara
+
+en este archivo de configuraciones apareceran varios ejemplos
+de como realizar la configuracion de varios tipos de subredes
+
+las 3 primeros ejemplos de como realizar una sudred se comentaran
+
+el 4to ejemplo es el que utilizaremos para realizar nuestra configuracion de la sudred
+
+y quedara de la siguiente manera
+
+subnet 20.0.0.0 netmask 255.0.0.0 {
+	range 20.0.0.100 20.0.0.129
+	option domain-name-servers 20.0.0.254;
+	option domain-name "ppascuasa.local";
+	option routers 20.0.0.1;
+	option broadcast-address 20.255.255.255;
+	default-lease-time 600;
+	max-lease-time 43200;
+}
+
+en el mismo archivo de configuracion despues de realizar las modificaciones
+en la parte de abajo aparecera 2 hosts y los comentaremos ##
+
+tambien aparecera una classe "foo" que la comentaremos por completo hasta
+la llave } final
+
+:wq
+
+5. iniciamos el servicio
+
+systemctl start dhcpd
+			SI NO APARECE NADA DESPUES DE INGRESAR
+			EL COMANDO ENTONCES TODO ESTA BIEN
+
+6.prueba de fuego
+
+arrancamos la maquina cliente
+
+nos aseguremos de que la maquina cliente tambien este en la misma subred
+del adactador del red la "red interna" - "LAN"
+
+entonces en el CMD de la maquina cliente haremos un ipconfig /release y un /renew
+y miramos la IP de la maquina
+
+si esta en el rango de direcciones del servicio entonces todo esta bien
+
+7.la prueba de fuego con el segundo cliente
+
+8. creamos un archivo en el centOS
+
+touch /home/prestamosDHCP.txt
+
+ahora enviaremos la informacion a ese archivo
+
+cat /var/lib/dhcpd/dhcpd.leases >> /home/prestamosDHCP.txt
+
+si quiere mirar la informacion que se ingreso en el archivo
+vim /home/prestamosDHCP.txt
+
+y para salir :q
+
+9. otra vez ir al archivo de configuracion para asignar una IP ESTATICA
+vim /etc/dhcp/dhcpd.conf
+
+y iremos a descomentar el primer host que aparece despues
+de la configuracion que hicimos
+
+y la modificaremos de esta manera
+
+host [nombre del host del cliente 2] //obiamente son los corchetes[]
+
+host equipo-2 {
+	hardware ethernet 08:0:27:07:2b:12; <-- es la MAC del cliente 2
+	fixed-address 20.0.0.114;    <--- ip estatica
+}
+
+:wq
+
+systemctl restart dhcpd
+
+iremos a la maquina cliente 2 y haremos otra vez el release y el renew
+y miremos que tenga la ip estatica .114
+
+10.comando proceso
+tail -f /var/log/messages $
+
+11. agregaremos el segundo DNS al servicio en el archivo de configuracion
+vim /etc/dhcp/dhcpd.conf
+
+en la parte donde tenemos configurado la sudred en la parte de
+option domain-name-servers 20.0.0.254;
+
+agregaremos esto
+option domain-name-servers 20.0.0.254, 8.8.8.8;
+
+:wq
+
+systemctl restart dhcpd
+
+iremos a cualquiera de las 2 maquinas cliente hacer el /release y /renew
+y tenemos que mirar si en la configuracion de red de esa maquina que tenga los 2 DNS
+
+la del servicio 20.0.0.254
+y en segundo que agregamos 8.8.8.8
+
+y si esta todo correcto 
+ENTONCES HEMOS TERMINADO
