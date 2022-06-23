@@ -1,0 +1,209 @@
+4. ir a revisar el enp0s8 si esta bien configurado
+vim /etc/sysconfig/network-scripts/ifcfg-enp0s8
+
+5. en el caso de hacerle una modificacion al enp0s8 hacer el
+ifdown y ifup
+
+______________________hacer primero lo de arriba_________________________
+
+1. ver la version del bind
+rpm -q bind
+2. cd /etc/
+3. vim named.conf    ----- archivo real de configuracion
+
+debe quedar asi
+
+options {
+	listen-on port 53 { 127.0.0.1; 20.0.0.254; };
+	
+	mas abajito
+
+	allow-query	{ localhost; 20.0.0.0/8; };
+
+borrar desde el comentado hasta el
+logging
+pero recuerden de mirar vien los parentesis o llaves
+borrar bien el logging con sus respectivas llaves
+y poner cuidado de no borrar la llave de options
+
+la zone no se borra se van a modificar
+
+se crean 2 zonas
+
+zone "ppascuasa.local" IN {
+	type master;
+	file "zona.directa";
+	allow-update {none; };
+};
+
+zone "0.0.20.in-addr.arpa" IN {
+	type master;
+	file "zona.inversa";
+	allow-update {none; };
+};
+
+las siguientes 2 include se comentan #####
+
+esc :wq
+
+4. comprobar si el archivo quedo bien modificado o no
+named-checkconf /etc/named.conf
+
+si no aparece nada al darle (ENTER) es porque todo esta bien configurado
+
+5.ahora ir a
+cd /usr/share/doc/bind-9.9.4/
+cd sample/
+cd var/
+cd named/
+
+6. copiar los archivos
+cp named.empty zona.directa
+cp named.empty zona.inversa
+
+7. cambiar los permisos
+chown root:named zona.directa zona.inversa
+
+verificar con ls -l que quede root named
+
+8. modificar la zona directa
+vim zona.directa
+
+el archivo debe de quedar de la siguiente manera
+
+$TTL 3H
+@	IN SOA dns1.ppascuasa.local. admin.ppascuasa.local. (
+					18062019	; serial
+					28800	; refresh
+					7200	; retry
+					604800	; expire
+					86400 )	; minimum
+@ IN NS dns1
+@ IN A	20.0.0.254
+dns1	IN A	20.0.0.254
+ftp	IN A	20.0.0.10
+www	IN A	20.0.0.11
+samba	IN A	20.0.0.12
+client1 IN A	20.0.0.13
+
+:wq
+
+9. para aprovechar la configuracion hagamos una copia a la otra zona
+cp zona.directa zona.inversa
+s
+
+modificar la otra zona
+vim zona.inversa
+
+el archivo debe de quedar de la siguiente manera
+
+$TTL 3H
+@	IN SOA dns1.ppascuasa.local. admin.ppascuasa.local. (
+					18062019	; serial
+					28800	; refresh
+					7200	; retry
+					604800	; expire
+					86400 )	; minimum
+@ IN NS dns1.ppascuasa.local.
+254	IN PTR  dns1.ppascuasa.local.
+10	IN PTR  ftp.ppascuas.local.
+11	IN PTR  www.ppascuas.local.
+12	IN PTR	samba.ppascuas.local.
+13	IN PTR	client1.ppascuasa.local.
+
+:wq
+
+10. comprobar las sintaxis de las zonas
+named-checkzone zona.directa /var/named/zona.directa
+
+Si sale OK todo esta bien no hay error
+
+named-checkzone zona.inversa /var/named/zona.inversa
+
+Si sale OK todo esta bien no hay error
+
+11. cambiar el hostname
+hostname dns1.ppascuasa.local.
+
+vim /etc/hostname
+
+modificamos y ponemos
+dns1.ppascuasa.local
+:wq
+
+nano /etc/hosts
+agregamos
+20.0.0.254  dns1 dns1.ppascuasa.local
+
+como estamos en un editor nano para guardar es ctrl+o
+le damos a (ENTER) para decirle que si guardar
+y para salir ctrl+x
+
+revisar si el enp0s8 sigue activo (up) con ifconfig y mirar si todavia tien la ip
+
+ahora le hacemos un ping a los host
+
+ping dns1 y a ping dns1.ppascuasa.local
+
+para interrumpir el ping es ctrl+c
+
+12. ahora poner los servidores DNS
+vim /etc/resolv.conf
+
+ponemos
+
+search ppascuasa.local
+nameserver 20.0.0.254
+
+:wq
+
+13. systemctl stop NetworkManager
+es para quitarle el control
+
+14. systemctl restart named
+
+15. apagar el enp0s3 porque como tiene la red NAT
+y con esa red tiene acceso a internet nos puede afectar un poco
+
+16. revisar si este archivo guardo la configuracion
+porque aveces no guarda la info
+vim /etc/resolv.conf
+
+17.configurar el firewall
+firewall-cmd --add-port=53/udp --permanent
+firewall-cmd --add-port=53/tcp --permanent
+firewall-cmd --reload
+
+18 ir a vim /etc/dhcp/dhcpd.conf
+
+y en la parte de la sudred
+	option domain-name-servers 20.0.0.254
+
+le quitamos el 8.8.8.8
+
+
+19. ########## PRUEBAAAS ########
+nslookup
+dns1.ppascuasa.local y con las otras y tiene que arrojar la ip
+y tambien con las ip 20.0.0.254 y tiene que arrojar el dominio
+y las respuestas son instantaneas
+
+20. ya en el caso de que no haya errores al dar las IP o el DOMINIO
+es hora de hacer las pruebas con un cliente
+
+ahora prender otra maquina cliente
+
+en el cmd del windows hacer el ipconfig /release y /renew
+y hacer nslookup
+y ahora ingresar los dominios y ip y mirar si arroja los resultados
+si arroja los resultados
+
+ESTA CONFIGURACION HA TERMINADO
+
+// ARCHIVO DE EJEMPLO //
+
+cd /usr/share/doc/bind-9.9.4/
+cd sample/
+cd etc/vim named.conf
+
+///////////////////////
