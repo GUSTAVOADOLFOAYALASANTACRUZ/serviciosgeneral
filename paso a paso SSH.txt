@@ -1,0 +1,132 @@
+1. creacion de las llaves
+
+esta llave tiene que crearla en la maquina CLIENTE
+
+ssh-keygen
+
+al generar la llave el programa dara una dirrecion diciendo en donde la guardara
+en caso de que usted quiera guardar la direccion en otra parte le diremos la ubicacion
+de en donde lo guardaremos
+si quieres guardarlo en la dirrecion del que el programa nos dio le daremos ENTER
+
+la frase (passphrase) solo delen ENTER
+nos pide colocar otra vez la frase le damos ENTER
+
+y ya nos creo las llaves
+id_rsa --> llave privada
+id_rsa.pub ---> llave publica
+
+2. ir a revisar el resolv
+cat /etc/resolv.conf
+
+y que tenga la ip del server
+
+mirar el hostname y que tenga el nombre del servidor
+
+y hacer pruebas de nslookup
+
+y hacer ping
+
+3. vamos a pasar las llaves desde el CLIENTE al SERVIDOR
+
+primero hay que esta parado en la ubicacion de las llaves
+y ahora si las mandamos
+
+ssh-copy-id -i id_rsa.pub root@ftp.ppascuasa.local
+
+yes
+
+la clave que pide es la del SERVIDOR --> sena2018
+
+y para ingresar al SERVIDOR desde el lado del CLIENTE
+
+ssh root@ftp.ppascuasa.local
+
+si te pide la clave del servidor es que no mando bien la llave
+
+si al ingresar no te pide nunguna contraseña es que todo esta bien
+configurado
+
+si quiere comprobar de que si esta del lado del SERVIDOR
+entre a mirar algun archivo que hemos configurado
+
+si se quiere desconectar del SERVIDOR solo es con exit
+
+4. hacer copia de seguridad al archivo de configuracion
+
+cd /etc/ssh/
+cp sshd_config sshd_config.old
+
+a modificar el archivo
+
+vim sshd_config
+
+descomentamos
+port 22
+y agregamos el puerto 2222
+
+:wq
+
+semanage port -a -t ssh_port_t -p tcp 2222
+
+5. puertos
+firewall-cmd --permanent --add-port=2222/tcp
+firewall-cmd --permanent --add-port=2222/udp
+firewall-cmd --reload
+
+y reiniciamos el servicio desde el SERVIDOR
+
+systemctl restart sshd
+
+6. nos desconectamos del servicio desde el cliente y volver a conectarnos
+pero por el puerto nuevo
+
+ssh -p 2222 root@ftp.ppascuasa.local
+
+7. copia segura de archivos
+
+ahora nos saldremos del SERVICIO en el CLIENTE exit
+
+y en el CLIENTE iremos a una ruta a la que uno quiera a crear un
+directorio
+
+y creamos el directorio con
+mkdir [nombre del directorio]
+
+y despues de crear el directorio entraremos al directorio
+cd [nombre del directorio]
+
+y crearemos varios archivos
+
+touch prueba{1..10}.txt
+
+y modificaremos un archivo para agregar contenido
+
+ejemplo
+
+vim prueba5.txt
+
+y agregaremos lo que queramos
+
+HOLA PRUEBA DE FUEGO
+
+:wq
+
+ahora nos salimos del directorio
+
+cd ..
+
+y ahora mandaremos ese directorio que creamos y los archivos que tenga adentro
+al servidor
+
+para saber la ubicacion de la ruta dar el comando pwd
+
+scp -P 2222 -r /[ruta del directorio]/ root@ftp.ppascuasa.local:/[ruta de destino EN EL SERVIDOR]
+
+ahora vamos al SERVIDOR y miramos si ese directorio realmente si se envio a la ruta de destino
+
+y miraremos si tambien envio los archivos que estaban dentro del directorio y tambien
+revisar si el archivo que estaba modificado tenga lo que agregamos anterior mente
+
+y si el archivo que modificamos tiene la informacion significa que todo se envio correctamente
+y hemos TERMINADO
