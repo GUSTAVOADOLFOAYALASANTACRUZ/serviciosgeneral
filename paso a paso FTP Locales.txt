@@ -1,0 +1,99 @@
+1. revisar si con nslookup en el centOS da ping con el dominio de FTP
+ftp.{nombre de su dominio}.local
+y hacerlo con inversa
+
+2. ir a
+cd /etc/vsftpd/
+
+3. hacemos una copia de seguridad
+cp vsftpd.conf vsftpd.conf.old
+
+4. editamos el archivo
+vim vsftpd.conf
+
+en anonymous_enable le ponemos =NO
+
+mas abajo en la linea 86 (abajo a la derecha dice en que linea del codigo estas pocisionado)
+la descomentamos y quedara asi:
+ftpd_banner=Bienvenidos al Servidor FTP de {su nombre} {su apellido} obiamente sin las llaves {}
+
+:wq
+
+5.reiniciamos el servicio
+systemctl restart vsftpd
+
+recuerde si no sale nada esta todo correcto
+
+6. los puertos
+firewall-cmd --permanent --add-port=20/tcp
+firewall-cmd --permanent --add-port=21/tcp
+firewall-cmd --permanent --add-service=ftp
+firewall-cmd --permanent --reload
+
+7. creamos un usuario
+useradd -s /sbin/nologin {nombre del usuario}
+
+ahora le agregamos un password a ese usuario
+passwd {nombre tal cual del usuario como usted lo haya creado}
+
+y digitaremos la nueva contraseña --- le recomiendo poner sena2018 que es la que usamos al iniciar seccion en esta maquina
+se le pedira que ingrese de nuevo el password por seguridad de que no la haya escrito mal
+
+8. ahora vamos a actualizar las zonas
+vim /var/named/zona.directa
+
+y en ftp que tiene la direccion 20.0.0.10 se la cambiamos a
+20.0.0.254
+
+:wq
+
+y ahora en la inversa
+vim /var/named/zona.inversa
+
+donde esta la ip 10 la cambiamos a la 254
+
+:wq
+
+y reiniciamos el servicio dns
+
+systemctl restart named ----- si no sale nada todo esta BIEN
+
+y le damos el siguiente comando
+
+systemctl enable named
+
+para que siempre este arrancando el servicio cuando iniciemos la maquina
+
+9. prueba de fuego
+arrancamos la maquina cliente
+
+en el cmd de la maquina cliente le hacemos ping a
+20.0.0.254 y revisamos si hay conexion
+
+y tambien hagamos la prueba nslookup para ver si actualizo los datos de ftp
+
+10. entremos al servicio FTP por el cliente
+ftp ftp.{nombre de su dominio}.local
+ingresaremos con el usuario que hayamos creado
+
+y para hacer la prueba final haremos 2 cosas
+
+primero creemos un directorio
+mkdir {nombre que usted quiera}
+
+y segundo ir a verificar si creo ese directorio en la maquina centOS en
+
+cd /home/{nombre del usuario}
+y le damos un ls
+
+y si aparece el directorio que creamos en color azul
+significa que si se creo con exito
+
+Y ESO ES TODO
+
+----------------------DATO IMPORTANTEEEEEEEEEEEEEEEEEEEE-----------------------------
+NO SE OLVIDE DE TOMAR LA INSTANTANEA Y GUARDARLA 
+PARA SI PODER ARRANCAR OTRA VEZ LA MAQUINA CON LAS CONFIGURACIONES DE DNS SIN ESTAS CONFIGURACIONES
+PARA HACER LAS CONFIGURACIONES DE FTP Virtuales
+YA QUE ESTOS 2 SERVICIOS NO PUEDEN FUNCIONAR A LA VEZ
+-------------------------------------------------------------------------------------------------------
