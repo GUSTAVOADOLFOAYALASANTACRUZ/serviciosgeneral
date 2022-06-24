@@ -1,0 +1,91 @@
+pasos de configuracion de Samba sin prueba en el cliente 
+1: yum install samba samba-common -y
+2: pwd
+3: clear
+4: mkadir /sharedsam
+5: semnage fcontext -a -t samba_share_t ´/sharedsam(/.*)?´
+6: semnage fcontext -a -t samba_share_t ´/sharedsam(/.*)?´
+7: restorecon -vvFR /shredsam
+8: vi /etc/samba/smb.conf
+9: clear
+10: testparm
+11: clear
+12: useradd -s /sbin/nologin gustavo
+13: useradd -s /sbin/nologin usersamba
+14: yum install samba-client
+15: clear
+16: smbpasswd -a gustavo
+17: smbpasswd -a usersamba
+18: pdbedit -L
+19: systemctl start smb nmb
+20: systemctl enable smb nmb
+21: systemctl status smb nmb
+22: clear 
+23: firewall-cmd --add-services=samba --permanent 
+24: firewall-cmd --permanent --add-services=samba
+25: clear
+26: firewall-cmd --permanent --add-services=samba
+27: firewall-cmd --reload
+28: cd /sharedsam/
+29: ls
+
+pasos de configuracion de mail sin prueba en el cliente 
+
+1: yum install -y bind bind-chroot bind-utils dovecot postfix mailx telnet 
+
+rpm -q postfix
+rpm -q dovecot
+rpm -q mailx
+rpm -q telnet
+rpm -q bind
+
+2: vi /etc/sysconfig/network-scripts/ifcfg-enp0s8
+3:vi /etc/hosts
+10.0.0.5 mail mail.dpazc.local
+4: useradd -s /sbin/nologin john
+5: useradd -s /sbin/nologin maria
+6: passwd john123
+7: passwd maria1234
+8: vi /etc/named.conf
+9: vi /var/named/zona.directa
+mail IN A 10.0.0.5
+10: vi /var/named/zona.inversa
+5  IN PTR mail.dpazc.local.
+11: vi /etc/postfix/main.cf
+12:vi /etc/dovecot/dovecot.conf ***
+13: vi /etc/dovecot/conf.d/10-auth.conf ***
+14: vi /etc/dovecot/conf.d/10-mail.conf ***
+15: vi /etc/dovecot/conf.d/10-master.conf ***
+16: vi /etc/dovecot/conf.d/10-ssl.conf ***
+18: systemctl enable dovecot
+19: systemctl start dovecot
+20: systemctl start postfix
+21: systemctl restart dovecot
+22: systemctl restart postfix
+23: systemctl restart named
+24: systemctl restart dhcpd
+
+----------------------------------------------------systemctl restart network (aqui....)
+25: firewall-cmd --permanent --add-service=smtp
+26: firewall-cmd --permanent --add-port=25/tcp
+27: firewall-cmd --permanent --add-port=110/tcp
+28: firewall-cmd --permanent --add-port=143/tcp
+29: firewall-cmd --reload
+telnet mail 25
+helo mail
+mail from:maria@dpazc.local
+rcpt to:jhon@depazc.local
+data
+hola como estas
+.
+quit
+
+
+30: cat /home/john/Maildir/new/1572479122.Vfd00I21a054dM313515.dns1.scorpus.local
+
+
+telnet mail 110
+user jhon
+pass 12345678
+retr 1
+ 
