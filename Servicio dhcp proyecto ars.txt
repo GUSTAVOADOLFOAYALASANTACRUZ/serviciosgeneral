@@ -1,0 +1,107 @@
+Configuracion dhcp
+
+Configuracion de Scrip de red interna
+
+vi /etc/sysconfig/network-scrips/
+-------------------------------------
+TYPE=Ethernet
+PROXY_METHOD=none
+BROWSER_ONLY=no
+BOOTPROTO=static
+DEFROUTE=yes
+IPV4_FAILURE_FATAL=no
+IPV6INIT=yes
+IPV6_AUTOCONF=yes
+IPV6_DEFROUTE=yes
+IPV6_FAILURE_FATAL=no
+IPV6_ADDR_GEN_MODE=stable-privacy
+NAME=enp0s8
+UUID=c0834188-fee5-47cd-b13b-05426e281d43
+DEVICE=enp0s8
+ONBOOT=yes
+IPADDR=172.16.3.254
+GATEWAY=172.16.3.100
+NETWORK=172.16.3.0
+NETMASK=255.255.0.0
+------------------------------------
+Instalar dhcp-server
+
+yum install dhcp-server
+
+Configuracion del archivo dhcpd.conf 
+
+ruta vim /etc/dhcp/dhcpd.conf
+
+------------------------------------------------
+authoritative;
+
+subnet 172.0.0.0 netmask 255.0.0.0 {
+        range 172.16.3.155 172.16.3.255;
+        option domain-name-servers 172.16.3.254;
+        option domain-name "arsgrupo3.local";
+        option routers 172.16.3.1;
+        option broadcast-address 172.16.255.255;
+        default-lease-time 600;
+        max-lease-time 21600;
+}
+
+------------------------------------------
+iniciar servicio
+
+systemctl start dhcpd
+systemctl enable dhcpd
+
+permitir servicio en el firewall 
+
+firewall-cmd --permanent --add-service=dhcp
+firewall-cmd --reload
+
+**************************************************************
+Servicio DNS1
+
+Instalar bind bind-utils
+
+yum install bind bind-utils -y
+
+Configuracion del archivo principal
+
+vim /etc/named.conf
+
+
+
+Configuración archivos de zona
+
+cd /var/named/
+
+Se crean las zonas
+
+
+
+
+Agregar al firewall
+firewall-cmd --permanent --add-port=53/tpc
+firewall-cmd --permanent --add-port=53/udp
+firewall-cmd --reload
+
+Configurar vim /etc/resolv.conf
+search arsgrupo3.local
+nameserver 172.16.3.254
+
+Tambien configurar vim /etc/hosts
+172.16.3.254 dns dns.arsgrupo3.local
+
+Tambien configurar vim /etc/hostname
+dns.arsgrupo3.local
+
+Cambiar el nombre
+
+hostnamectl set-hostname dns.arsgrupo3.local
+
+
+
+
+
+
+
+
+
